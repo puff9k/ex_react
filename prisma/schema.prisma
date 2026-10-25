@@ -1,0 +1,28 @@
+// Schéma Prisma : source de vérité de la structure de la base.
+// Après modification : `npm run db:migrate` (crée une migration SQL + régénère le client).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Message {
+  id        Int            @id @default(autoincrement())
+  name      String
+  email     String
+  subject   MessageSubject @default(OTHER)
+  content   String
+  createdAt DateTime       @default(now())
+
+  @@index([createdAt])
+}
+
+enum MessageSubject {
+  QUESTION
+  FEEDBACK
+  OTHER
+}
