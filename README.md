@@ -1,48 +1,30 @@
-# Ex React
+IA : vu que j'ai qu'une seule mission, les attendus idéaux seraient :
+					Faire un maximum avec l'IA pour être plus efficace, avec comme seule condition d'être capable de comprendre, modifier et refaire parfaitement, pour avoir un niveau de modification personnalisée qui n'est pas compromis du tout
 
-Maquette d'un site Next.js (App Router) + CSS vanilla + Prisma.
+Raison : probabilité élevée que quand j'écrive du code et demande une review à l'IA, il me sorte quelque chose de plus optimal | Mais quand le code grossira, il sera moins efficace, d'où l'utilité d'absolument tout connaître
 
-## Structure
+expliquer avec le repo git :
+Header et Footer comme des directives AngularJs, comme fonction à exporter. Importés dans src/app/layout.tsx, qui sera à son tour importé dans tous les fichiers avec header / footer
+-> imbrication de composants les uns dans les autres, chacun importe et s'exporte
 
-```
-prisma/
-  schema.prisma            # modèles de la base (source de vérité)
-  migrations/              # SQL généré par `prisma migrate dev`
-  seed.ts                  # données de démo
-src/
-  app/                     # routing par dossiers (App Router)
-    layout.tsx             # layout racine : header + footer
-    globals.css            # variables CSS, reset, styles globaux
-    page.tsx               # "/"
-    not-found.tsx          # 404 (URL inconnue ou notFound())
-    error.tsx              # error boundary global (Client Component)
-    contact/
-      page.tsx             # "/contact" (Server Component)
-      ContactForm.tsx      # formulaire (Client Component, useActionState)
-      actions.ts           # Server Action : validation + écriture en base
-    messages/
-      page.tsx             # "/messages" : liste lue en base (Server Component async)
-      loading.tsx          # affiché pendant le chargement des données
-      [id]/page.tsx        # "/messages/:id" : route dynamique
-    api/messages/
-      route.ts             # GET/POST /api/messages
-      [id]/route.ts        # GET/DELETE /api/messages/:id
-  components/              # composants réutilisables + leur CSS Module
-  lib/
-    prisma.ts              # instance unique du client Prisma
-    messages.ts            # accès aux données (server-only)
-    validation.ts          # validation partagée action / API
-    subjects.ts            # libellés de l'enum, utilisable côté client
-    format.ts              # helpers d'affichage
-```
+Next : routing -> chaque dossier de src/app est l'url, affiche le fichier dans le dossier, permet routes dynamiques
+!!! Aucune config de route à faire : l'architecture des dossiers suffit. Dossier entre crochets pour url dynamique
 
-## Démarrage
+Noms réservés next.js :
+layout.tsx : cadre autour des pages, par exemple header et footer
+loading.tsx : affiché pendant que la page attend ses données
+error.tsx : affiché si erreur pendant le rendu
+not-found.tsx : 404
+route.ts : route d'api qui renvoie des données et non une page
+autres fichiers à la racine src/app, comme les .css, ne créent pas de routes, sont importées par composants
 
-```bash
-cp .env.example .env     # puis renseigner DATABASE_URL
-npm install              # lance aussi `prisma generate`
-npm run db:migrate       # applique les migrations
-npm run db:seed          # données de démo
-npm run dev
-npm run typecheck        # vérification TypeScript
-```
+css : globals.css, appliqué partout, puis les *.modules.css, importés par les composants
+Next gère aussi composants soit serveur, soit client. Serveur = pas de click, acces bdd. Sinon "use client"
+Exemple : header.tsx : serveur, affiche seulement liens. Form.tsx : gère l'état du formulaire
+Règle : max de code côté serveur
+
+Prisma : bdd, remplace php
+prisma/schema.prisma : décrit la base : genere scripts de création
+prisma.ts : crée une connexion à la bdd exportable (comme php)
+src/lib/messages.ts : fonctions utilitaires get
+api sert aux ressources externes, comme un autre site
