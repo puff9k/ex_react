@@ -1,0 +1,245 @@
+1. Les deux briques : React et Next
+
+React sert à fabriquer l'interface avec des composants. Un composant est une fonction qui renvoie du pseudo-HTML (le JSX) :
+
+export default function Footer() {
+  return <footer>© 2026 Ex React</footer>;
+}
+
+Un composant peut en utiliser un autre comme une balise HTML : <Footer />. Tout le site est un emboîtement de composants.
+
+Next.js est un framework construit autour de React. Il ajoute ce que React ne fait pas seul :
+- le routing, c'est-à-dire quelle URL affiche quel composant ;
+- le rendu côté serveur : le HTML est fabriqué sur le serveur avant d'être envoyé au navigateur ;
+- l'accès au serveur, donc à la base de données, directement depuis les composants ;
+- le build, le serveur de dev, etc.
+
+Prisma fait le lien entre le code et la base de données. Au lieu d'écrire du SQL, on écrit prisma.message.findMany().
+
+---
+
+2. Le routing : le dossier, c'est l'U
+
+Next regarde le dossier src/app/. ChaURL, et le fichier page.tsx qu'ilcontient est la page affichée.
+
+src/app/
+├── page.tsx                  →  /
+├── contact/page.tsx          →  /contact
+├── messages/page.tsx         →  /mes
+├── messages/[id]/page.tsx    →  /messages/1, /messages/42, …
+└── api/messages/route.ts     →  /apipas une page)
+
+Il n'y a aucun fichier de configuratiier a-propos/ avec un page.tsx dedanssuffit pour que /a-propos existe.
+
+[id] entre crochets est un segment dynamique. Il accepte n'importe quelle valeur, et la page la reçoit
+dans params : pour /messages/42, on o
+
+Les fichiers aux noms réservés
+
+Next reconnaît d'autres noms de fichi
+
+┌───────────────┬───────────────────────────────┐
+│    Fichier    │                            Rôle                            │
+├───────────────┼───────────────────────────────┤
+│ layout.tsx    │ Cadre autour des pages (ici le header et le footer)        │
+├───────────────┼───────────────────────────────┤
+│ loading.tsx   │ Affiché pendant que la page attend ses données             │
+├───────────────┼───────────────────────────────┤
+│ error.tsx     │ Affiché si une erreur se produit pendant le rendu          │
+├───────────────┼───────────────────────────────┤
+│ not-found.tsx │ La page 404                                                │
+├───────────────┼───────────────────────────────┤
+│ route.ts      │ Une route d'API qui renvoie des données plutôt qu'une page │
+└───────────────┴───────────────────────────────┘
+
+Les autres fichiers (ContactForm.tsx,éent pas de route. Ce sont desfichiers ordinaires qu'on importe.
+
+---
+
+3. Le layout : le cadre commun
+
+src/app/layout.tsx enveloppe toutes les pages :
+
+<html lang="fr">
+  <body>
+    <Header />
+    <main>{children}</main>   ← la pa placer ici
+    <Footer />
+  </body>
+</html>
+
+children est un nom spécial en React : il désigne « ce qu'on met à l'intérieur ». Sur /contact, Next
+prend contact/page.tsx et l'insère à ader et le footer ne sont écritsqu'une fois, dans le layout.
+
+Le layout importe aussi globals.css, qui s'applique donc à tout le site.
+
+---
+
+4. Le style : CSS global et CSS Modules
+
+Il y a deux sortes de CSS :
+
+- globals.css : les variables (--color-primary, etc.), le reset et la typo. Ces règles s'appliquent
+  partout.
+- *.module.css (CSS Modules) : du CSS normal, mais limité au composant qui l'importe.
+
+import styles from "./Header.module.css";
+<header className={styles.header}>
+
+Au build, Next renomme .header en queer__x7f2a. Deux composants peuventdonc avoir chacun une classe .title sans conflit. Chaque composant a son fichier CSS juste à côté de
+lui.
+
+---
+
+5. Server Components et Client Compon
+
+C'est le concept clé de Next moderne. s'exécute sur le serveur. Il produitdu HTML et son code n'est jamais envoyé au navigateur. Un composant serveur peut donc lire la base de
+données, mais il ne peut pas réagir a
+
+Quand un composant a besoin d'interact, ou savoir sur quelle URL on setrouve), on écrit "use client" en première ligne. Son code est alors aussi envoyé au navigateur.
+
+Dans ce projet :
+
+┌───────────────────┬─────────┬──────────────────────────────────────────────────────────────────────┐
+│      Fichier      │  Côté   │      quoi                               │
+├───────────────────┼─────────┼──────────────────────────────────────────────────────────────────────┤
+│ Header.tsx        │ serveur │ il ne                                   │
+├───────────────────┼─────────┼──────────────────────────────────────────────────────────────────────┤
+│ NavLink.tsx       │ client  │ il dousePathname) pour surligner le     │
+│                   │         │ lien actif                                                           │
+├───────────────────┼─────────┼─────────────────────────────────────────┤
+│ contact/page.tsx  │ serveur │ titre et texte fixes                                                 │
+├───────────────────┼─────────┼─────────────────────────────────────────┤
+│ ContactForm.tsx   │ client  │ il gère l'état du formulaire (envoi en cours, erreurs)               │
+├───────────────────┼─────────┼─────────────────────────────────────────┤
+│ messages/page.tsx │ serveur │ il lit la base de données                                            │
+├───────────────────┼─────────┼─────────────────────────────────────────┤
+│ error.tsx         │ client  │ Next l'impose, car le bouton « Réessayer » réagit au clic            │
+└───────────────────┴─────────┴─────────────────────────────────────────┘
+
+La règle est de garder un maximum de sser en client que la petite partieinteractive. C'est pour ça que Header (serveur) contient NavLink (client).
+
+---
+
+6. La base de données : quatre couches
+
+prisma/schema.prisma        ① Décrit la base : modèle Message (id, name, email…)
+        │
+        │  `prisma migrate dev`  → génère le SQL (prisma/migrations/…/migration.sql)
+        │  `prisma generate`     → géient Prisma
+        ▼
+src/lib/prisma.ts           ② Crée UNporte
+        ▼
+src/lib/messages.ts         ③ FonctioeateMessage()…
+        ▼
+pages / actions / API       ④ Utilisee ③
+
+- ① On modifie le schéma, puis PrismaeScript. Le code connaît doncexactement les champs de la table : une faute de frappe sur message.nmae est signalée à l'écriture.
+- ② prisma.ts évite qu'on ouvre une ct en développement.
+- ③ messages.ts regroupe toutes les requêtes au même endroit. Sa première ligne, import "server-only",
+  fait échouer le build si un composar, ce qui empêche d'envoyer par erreur du code d'accès à la base dans le navigateur.
+- ④ Les pages ne parlent jamais à Pri de base un jour, seul messages.ts est à modifier.
+
+prisma/seed.ts est un script à part (npm run db:seed) qui remplit la base avec des données de test.
+
+---
+
+7. Qui importe qui
+
+layout.tsx
+├── globals.css
+├── components/Header/Header.tsx ── Header.module.css
+│   └── NavLink.tsx (client) ────── H
+└── components/Footer/Footer.tsx ── Footer.module.css
+
+page.tsx (accueil) ── page.module.css
+
+contact/page.tsx ── contact.module.css
+└── ContactForm.tsx (client)
+    ├── actions.ts (serveur) ── lib/validation.ts ── lib/subjects.ts
+    │                         └ lib/m
+    └── lib/subjects.ts   (libellés des options du <select>)
+
+messages/page.tsx ──────┐
+messages/[id]/page.tsx ─┼── lib/messaformat.ts
+                        └── messages.module.css
+
+api/messages/route.ts ──── lib/messages.ts, lib/validation.ts
+
+Le préfixe @/ dans les imports (@/lib/messages) est un raccourci pour src/, défini dans tsconfig.json.
+Il évite d'écrire ../../../lib/messag
+
+---
+
+8. Trois scénarios de bout en bout
+
+A. J'ouvre /messages
+
+1. Le navigateur demande /messages au
+2. Next trouve app/messages/page.tsx et l'insère dans layout.tsx.
+3. Pendant que la page attend ses dontenu de loading.tsx (le spinner).
+4. La page exécute await getMessages(), puis messages.ts interroge la base via Prisma.
+5. La page génère la liste en HTML, e spinner.
+6. Le navigateur affiche la page. Seul le code de NavLink y est téléchargé, puisque c'est le seul
+   composant client de la page.
+
+Le composant va chercher ses données  pas d'appel d'API depuis lenavigateur.
+
+B. J'envoie le formulaire de contact
+
+1. ContactForm.tsx affiche le formulaire. Son attribut action={formAction} est relié à la fonction
+   sendMessage de actions.ts.
+2. Au clic sur « Envoyer », le navigateur envoie les champs au serveur. Next s'en charge
+   automatiquement, sans route d'API des Server Actions, qu'on signale par"use server" en haut du fichier.
+3. Pendant l'envoi, isPending vaut trvoi… » et se désactive.
+4. Sur le serveur, sendMessage :
+   - lit les champs (formData.get("na
+   - les vérifie avec validateMessage(). En cas d'erreur, elle renvoie { errors: {...} } et le
+     formulaire affiche les messages
+   - sinon, elle appelle createMessage(), qui passe par Prisma et insère le message en base ;
+   - appelle revalidatePath("/messagersion en cache de /messages estpérimée » ;
+   - renvoie { success: true }.
+5. useActionState reçoit ce résultat et redessine le composant, qui affiche « Merci ! ».
+
+C. J'ouvre /messages/42
+
+1. Next associe l'URL à messages/[id]/page.tsx, avec params.id = "42".
+2. La page appelle getMessageById(42)
+3. Si le message n'existe pas, notFound() interrompt le rendu et Next affiche not-found.tsx.
+4. Si la base plante, l'erreur remontose un bouton « Réessayer ».
+5. generateMetadata définit le titre de l'onglet, par exemple « Message de Alice | Ex React ».
+
+---
+
+9. Et l'API, à quoi sert-elle ?
+
+Le site lui-même n'utilise pas api/messages/. Les pages lisent la base directement et le formulaire
+passe par la Server Action.
+
+Les routes route.ts servent aux clienile, un script, un autre site. Le nomde chaque fonction exportée correspond à une méthode HTTP :
+
+export async function GET()  { … }   // GET  /api/messages
+export async function POST() { … }
+
+Elles réutilisent les mêmes fonctionss. Les règles de validation ne sontdonc écrites qu'une fois.
+
+---
+
+10. Les fichiers de configuration à la racine
+
+┌────────────────┬───────────────────────────────────────────────────────────────────────────────────┐
+│    Fichier     │                                                      │
+├────────────────┼───────────────────────────────────────────────────────────────────────────────────┤
+│ package.json   │ dépendances et comdb:migrate…)                       │
+├────────────────┼───────────────────────────────────────────────────────────────────────────────────┤
+│ tsconfig.json  │ réglages TypeScrip                                   │
+├────────────────┼───────────────────────────────────────────────────────────────────────────────────┤
+│ next.config.ts │ options de Next (p                                   │
+├────────────────┼───────────────────────────────────────────────────────────────────────────────────┤
+│ next-env.d.ts  │ fichier généré par                                   │
+├────────────────┼───────────────────────────────────────────────────────────────────────────────────┤
+│ .env.example   │ modèle du fichier de la base (DATABASE_URL) et n'est │
+│                │  jamais commité                                                                 ├────────────────┼──────────────────────────────────────────────────────┤
+│ .gitignore     │ fichiers que Git doit ignorer                                                   └────────────────┴──────────────────────────────────────────────────────┘
+                                                                                                   ---
+                                                                                                   En résumé : l'URL désigne un dossier, est placé dans layout.tsx. Lescomposants tournent sur le serveur par défaut et lisent la base via lib/messages.ts, qui passe par Prisma. Seules les parties interactive formulaire écrit en base par uneServer Action, puis invalide le cache pour que la liste se mette à jour. 
